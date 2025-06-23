@@ -1,0 +1,39 @@
+{
+  "extends": "./repos/common/tsconfig.json",
+  "compilerOptions": {
+      "target": "ES2020",
+      "module": "commonjs",
+      "lib": ["ES2020"],
+      "outDir": "./dist",
+      "rootDir": "./",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "resolveJsonModule": true,
+      "declaration": true,
+      "declarationMap": true,
+      "sourceMap": true,
+      "baseUrl": ".",
+      "experimentalDecorators": true,
+      "emitDecoratorMetadata": true,
+      "paths": {
+          "@/*": ["./src/common/*"],
+          "@models/*": ["./src/common/models/*"],
+          "@classes/*": ["./src/common/classes/*"],
+          "@constants/*": ["./src/common/constants/*"],
+          "@decorators/*": ["./src/common/decorators/*"],
+          "@enums/*": ["./src/common/enums/*"],
+          "@utils/*": ["./src/common/utils/*"]
+      }
+  },
+  "include": [
+      "src/**/*",
+      "tests/**/*"
+  ],
+  "exclude": [
+      "node_modules",
+      "dist",
+      "lib"
+  ]
+} 

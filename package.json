@@ -1,0 +1,44 @@
+{
+  "name": "recoverysky-timezone",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Pippa and Jenova",
+  "main": "index.js",
+  "keywords": [],
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "tz:update": "npx tzdata-update"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "timezonecomplete": "^5.14.1"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.830.0",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
+    "@types/lodash": "^4.17.17",
+    "@types/luxon": "^3.6.2",
+    "@types/node": "^24.0.3",
+    "bson": "^6.10.4",
+    "drizzle-kit": "^0.31.1",
+    "drizzle-orm": "^0.44.2",
+    "jest": "^30.0.0",
+    "jose": "^6.0.11",
+    "nodemon": "^3.1.10",
+    "pg": "^8.16.0",
+    "rollup": "^4.43.0",
+    "rollup-plugin-dts": "^6.2.1",
+    "rxdb": "^16.15.0",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3",
+    "typescript-json-schema": "^0.65.1"
+  }
+}
