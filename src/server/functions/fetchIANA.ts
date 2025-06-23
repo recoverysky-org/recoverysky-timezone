@@ -159,16 +159,30 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 /**
  * Complete workflow: Fetch IANA data URL and download/extract to destination
  * @param destinationFolder - The folder to copy the extracted contents to
+ * @param currentVersion - Current timezone data version (optional, for version checking)
  * @param dryRun - If true, pass --dry-run flag to the shell script
- * @returns Promise<Result<void>> - Success or error result
+ * @returns Promise<Result<{ updated: boolean; version: string }>> - Success with update status and version
  */
-export async function updateTimezoneData(destinationFolder: string, dryRun: boolean = false): Promise<Result<void>> {
+export async function updateTimezoneData(destinationFolder: string, currentVersion?: string, dryRun: boolean = false): Promise<Result<{ updated: boolean; version: string }>> {
 	// Step 1: Fetch the data URL
 	const urlResult = await fetchDataOnlyDistributionUrl();
 	if (!urlResult.ok) {
 		return mapErr(urlResult, error => 
 			new Error(`Failed to fetch IANA data URL: ${error.message}`)
 		);
+	}
+	
+	// Extract version from URL (e.g., "tzdata2025b.tar.gz" -> "2025b")
+	const versionMatch = urlResult.value.match(/tzdata(\d{4}[a-z])\.tar\.gz$/);
+	if (!versionMatch) {
+		return err(new Error(`Could not extract version from URL: ${urlResult.value}`));
+	}
+	const newVersion = versionMatch[1];
+	
+	// Check if we already have the latest version
+	if (currentVersion && currentVersion === newVersion) {
+		console.log(`📅 Timezone data is already up to date (version ${currentVersion})`);
+		return ok({ updated: false, version: newVersion });
 	}
 	
 	// Step 2: Download and extract the tarball
@@ -179,5 +193,6 @@ export async function updateTimezoneData(destinationFolder: string, dryRun: bool
 		);
 	}
 	
-	return ok(undefined);
+	console.log(`📅 Updated timezone data from ${currentVersion || 'unknown'} to ${newVersion}`);
+	return ok({ updated: true, version: newVersion });
 } 

@@ -4,8 +4,7 @@
   import path from 'path';
   import { Result, tryResult, isOk, isErr, mapErr } from '../common/utils/RustResult';
   import { convertToTimeZone } from './functions/convertToTimeZone';
-  import { initializeTimezoneComplete } from './functions/timezonecomplete-setup';
-  import { updateTimezoneData } from './functions/fetchIANA';
+  import { setupTimezoneData } from './functions/setupTimezoneData';
 
   // Load environment variables from .env file
   dotenv.config();
@@ -28,27 +27,21 @@
     return path.join(process.cwd(), baseDir, 'server', 'tzdata');
   }
 
-  // Update timezone data and initialize timezonecomplete on server startup
-  (async () => {
-    const tzdataPath = getTzdataPath();
-    console.log(`🌍 Using tzdata path: ${tzdataPath}`);
-    
-    // First, update timezone data
-    const updateResult = await updateTimezoneData(tzdataPath);
-    if (updateResult.ok) {
-      console.log('✅ Timezone data updated successfully');
-    } else {
-      console.error('❌ Failed to update timezone data:', updateResult.error.message);
-    }
-    
-    // Then initialize timezonecomplete
-    const initResult = await initializeTimezoneComplete();
-    if (initResult.ok) {
-      console.log('✅ TimezoneComplete initialized successfully');
-    } else {
-      console.error('❌ Failed to initialize TimezoneComplete:', initResult.error.message);
-    }
-  })();
+  // Simple error handler for timezone setup
+  async function handleTimezoneSetup(): Promise<void> {
+	const result = await setupTimezoneData();
+	if (!result.ok) {
+		console.error('❌ Timezone setup failed:', result.error.message);
+		return;
+	}
+	console.log('✅ Timezone setup completed successfully');
+  }
+
+  // Initial setup on server startup
+  handleTimezoneSetup();
+
+  // Set up timer to refresh timezone data every minute
+  setInterval(handleTimezoneSetup, 60 * 1000);
   
   /**
    * Convert a ISO string to a specific timezone
@@ -63,7 +56,7 @@
      * @param toTimeZone - (required)The timezone to convert to
      * @returns The converted ISO string
      */
-    const { isoString, fromTimeZone,toTimeZone } = req.body;
+    const { isoString, fromTimeZone, toTimeZone } = req.body;
     
     // Convert ISO string to UTC
     const conversionResult = await tryResult(async () => await convertToTimeZone(isoString, fromTimeZone, toTimeZone));

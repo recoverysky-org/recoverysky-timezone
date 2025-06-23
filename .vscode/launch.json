@@ -1,7 +1,25 @@
 {
     "version": "0.2.0",
     "configurations": [
-		
+        {
+            "name": "Debug Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+            "args": [
+                "-r",
+                "tsconfig-paths/register",
+                "${workspaceFolder}/src/server/server.ts"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
         {
             "name": "Debug Jest Tests",
             "type": "node",
