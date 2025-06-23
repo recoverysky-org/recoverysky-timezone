@@ -1,11 +1,54 @@
   // 📁 /src/server.ts
+  import dotenv from 'dotenv';
   import express from 'express';
+  import path from 'path';
   import { Result, tryResult, isOk, isErr, mapErr } from '../common/utils/RustResult';
   import { convertToTimeZone } from './functions/convertToTimeZone';
+  import { initializeTimezoneComplete } from './functions/timezonecomplete-setup';
+  import { updateTimezoneData } from './functions/fetchIANA';
 
-  
+  // Load environment variables from .env file
+  dotenv.config();
+
   const app = express();
   app.use(express.json());
+  
+  /**
+   * Gets the correct tzdata path for the current environment
+   * @returns string - Path to tzdata directory
+   */
+  function getTzdataPath(): string {
+    // Check if we're running from dist/ directory
+    const isRunningFromDist = __dirname.includes('dist');
+    
+    // In development (ts-node): src/server/tzdata
+    // In production/dist: dist/server/tzdata  
+    // In docker: /app/dist/server/tzdata (or wherever the app is mounted)
+    const baseDir = isRunningFromDist ? 'dist' : 'src';
+    return path.join(process.cwd(), baseDir, 'server', 'tzdata');
+  }
+
+  // Update timezone data and initialize timezonecomplete on server startup
+  (async () => {
+    const tzdataPath = getTzdataPath();
+    console.log(`🌍 Using tzdata path: ${tzdataPath}`);
+    
+    // First, update timezone data
+    const updateResult = await updateTimezoneData(tzdataPath);
+    if (updateResult.ok) {
+      console.log('✅ Timezone data updated successfully');
+    } else {
+      console.error('❌ Failed to update timezone data:', updateResult.error.message);
+    }
+    
+    // Then initialize timezonecomplete
+    const initResult = await initializeTimezoneComplete();
+    if (initResult.ok) {
+      console.log('✅ TimezoneComplete initialized successfully');
+    } else {
+      console.error('❌ Failed to initialize TimezoneComplete:', initResult.error.message);
+    }
+  })();
   
   /**
    * Convert a ISO string to a specific timezone

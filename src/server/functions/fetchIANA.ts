@@ -77,7 +77,10 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 			throw new Error(`Invalid URL format: ${url}`);
 		}
 		
-		const scriptPath = path.join(__dirname, '../scripts/downloadAndExtractTarball.zsh');
+		// Get correct script path based on runtime location
+		const isRunningFromDist = __dirname.includes('dist');
+		// Always reference from source since scripts aren't copied to dist/
+		const scriptPath = path.join(process.cwd(), 'src', 'scripts', 'downloadAndExtractTarball.zsh');
 		const tmpDir = './tmp';
 		
 		// Check if script exists
