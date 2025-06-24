@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Result, ok, err } from '../../common/utils/RustResult';
+import { Result, err, ok } from 'ts-rust-result';
 
 /**
  * Configuration for timezonecomplete to use local tzdata
@@ -29,16 +29,32 @@ interface TimezoneConfig {
 }
 
 /**
- * Loads timezone configuration from the setup file
+ * Loads timezone configuration from the config file
  * @returns Promise<Result<TimezoneConfig>> - Configuration or error
  */
 export async function loadTimezoneConfig(): Promise<Result<TimezoneConfig>> {
 	try {
-		const tzdataDir = path.join(__dirname, '../tzdata');
+		// Determine which config file to use based on environment
+		const configFileName = process.env.NODE_ENV === 'production' ? 'config.prod.tz' : 'config.dev.tz';
+		const configPath = path.join(__dirname, configFileName);
 		
+		// Read config file
+		const configContent = await fs.readFile(configPath, 'utf-8');
+		
+		// Parse TZDIR from config
+		const tzdirMatch = configContent.match(/TZDIR=@(.+)/);
+		if (!tzdirMatch) {
+			return err(new Error(`TZDIR not found in config file: ${configFileName}`));
+		}
+		
+		// Resolve the tzdata directory path
+		const configTzdir = tzdirMatch[1];
+		const baseDir = process.env.NODE_ENV === 'production' ? 'dist' : 'src';
+		const tzdataDir = path.join(process.cwd(), baseDir, 'server', 'tzdata');
+
 		// Verify tzdata directory exists
 		await fs.access(tzdataDir);
-		
+
 		const config: TimezoneConfig = {
 			tzdir: tzdataDir,
 			zoneinfo: path.join(tzdataDir, 'zone.tab'),
@@ -61,12 +77,12 @@ export async function loadTimezoneConfig(): Promise<Result<TimezoneConfig>> {
 			iso3166: path.join(tzdataDir, 'iso3166.tab'),
 			version: path.join(tzdataDir, 'version')
 		};
-		
+
 		// Verify key files exist
 		await fs.access(config.zoneinfo);
 		await fs.access(config.zone1970);
 		await fs.access(config.leapseconds);
-		
+
 		return ok(config);
 	} catch (error) {
 		return err(error instanceof Error ? error : new Error(String(error)));
@@ -83,16 +99,16 @@ export async function initializeTimezoneComplete(): Promise<Result<void>> {
 		if (!configResult.ok) {
 			return configResult;
 		}
-		
+
 		const config = configResult.value;
-		
+
 		// Set environment variables for timezonecomplete
 		process.env.TZDIR = config.tzdir;
 		process.env.LOCALTZ = '1';
-		
+
 		console.log(`🌍 TimezoneComplete initialized with local tzdata: ${config.tzdir}`);
 		console.log(`📅 Using timezone data version: ${await fs.readFile(config.version, 'utf-8')}`);
-		
+
 		return ok(undefined);
 	} catch (error) {
 		return err(error instanceof Error ? error : new Error(String(error)));
@@ -109,7 +125,7 @@ export async function getTimezoneVersion(): Promise<Result<string>> {
 		if (!configResult.ok) {
 			return configResult;
 		}
-		
+
 		const version = await fs.readFile(configResult.value.version, 'utf-8');
 		return ok(version.trim());
 	} catch (error) {
@@ -127,7 +143,7 @@ export async function validateTimezoneFiles(): Promise<Result<boolean>> {
 		if (!configResult.ok) {
 			return configResult;
 		}
-		
+
 		const config = configResult.value;
 		const requiredFiles = [
 			config.zoneinfo,
@@ -136,7 +152,7 @@ export async function validateTimezoneFiles(): Promise<Result<boolean>> {
 			config.iso3166,
 			...Object.values(config.regions)
 		];
-		
+
 		for (const file of requiredFiles) {
 			try {
 				await fs.access(file);
@@ -144,7 +160,7 @@ export async function validateTimezoneFiles(): Promise<Result<boolean>> {
 				return err(new Error(`Missing required timezone file: ${file}`));
 			}
 		}
-		
+
 		return ok(true);
 	} catch (error) {
 		return err(error instanceof Error ? error : new Error(String(error)));
