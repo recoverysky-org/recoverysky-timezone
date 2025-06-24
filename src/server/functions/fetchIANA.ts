@@ -79,7 +79,7 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 
 		// Get correct script path based on environment
 		const scriptPath = process.env.NODE_ENV === 'production'
-			? path.join(process.cwd(), 'dist', 'server', 'scripts', 'downloadAndExtractTarball.sh')
+			? path.join(process.cwd(), 'dist', 'scripts', 'downloadAndExtractTarball.sh')
 			: path.join(process.cwd(), 'src', 'server', 'scripts', 'downloadAndExtractTarball.sh');
 		const tmpDir = './tmp';
 		

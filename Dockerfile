@@ -20,7 +20,7 @@ RUN mkdir -p dist
 COPY dist/ ./dist
 
 # Make dist/server/scripts executable
-RUN chmod +x dist/server/scripts/*.sh
+RUN chmod +x dist/scripts/*.sh
 
 # Install pnpm globally
 RUN npm install -g pnpm@latest

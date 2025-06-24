@@ -12,7 +12,7 @@
     "dev": "ts-node-dev --respawn src/index.ts",
     "make": "pnpm build && pnpm docker:build && pnpm docker:tag && pnpm docker:push",
     "build": "tsup",
-    "postbuild": "copyfiles -u 1 \"src/server/scripts/**/*\" \"src/server/config.*.tz\" dist && chmod +x dist/server/scripts/*.sh",
+    "postbuild": "copyfiles -u 2 \"src/server/scripts/**/*\" \"src/server/config.*.tz\" dist && chmod +x dist/scripts/*.sh",
     "docker:build": "docker buildx build --platform linux/arm64 -t recoverysky-timezone:local .",
     "docker:run": "docker run -p 3838:3838 recoverysky-timezone:local",
     "docker:tag": "docker tag recoverysky-timezone:local 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:latest",
