@@ -1,0 +1,35 @@
+# TimezoneComplete Configuration - Production
+# Points to local tzdata directory for timezone information
+
+# Set the timezone data directory to our local tzdata folder
+TZDIR=@/dist/server/tzdata
+
+# Enable local timezone data loading
+LOCALTZ=1
+
+# Timezone data files to load
+ZONEINFO=@/dist/server/tzdata/zone.tab
+ZONE1970=@/dist/server/tzdata/zone1970.tab
+ZONENOW=@/dist/server/tzdata/zonenow.tab
+
+# Regional timezone files
+AFRICA=@/dist/server/tzdata/africa
+ANTARCTICA=@/dist/server/tzdata/antarctica
+ASIA=@/dist/server/tzdata/asia
+AUSTRALASIA=@/dist/server/tzdata/australasia
+EUROPE=@/dist/server/tzdata/europe
+NORTHAMERICA=@/dist/server/tzdata/northamerica
+SOUTHAMERICA=@/dist/server/tzdata/southamerica
+ETCETERA=@/dist/server/tzdata/etcetera
+BACKWARD=@/dist/server/tzdata/backward
+BACKZONE=@/dist/server/tzdata/backzone
+FACTORY=@/dist/server/tzdata/factory
+
+# Leap seconds data
+LEAPSECONDS=@/dist/server/tzdata/leap-seconds.list
+
+# ISO country codes
+ISO3166=@/dist/server/tzdata/iso3166.tab
+
+# Version information
+VERSION=@/dist/server/tzdata/version 
