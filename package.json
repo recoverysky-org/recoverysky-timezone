@@ -10,18 +10,28 @@
   "packageManager": "pnpm@10.11.0",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc",
-    "start": "node dist/src/server/server.js",
+    "make": "pnpm build && pnpm docker:build && pnpm docker:tag && pnpm docker:push",
+    "build": "tsup",
+    "postbuild": "copyfiles -u 1 \"src/server/scripts/**/*\" \"src/server/config.*.tz\" dist && chmod +x dist/server/scripts/*.sh",
+    "docker:build": "docker buildx build --platform linux/arm64 -t recoverysky-timezone:local .",
+    "docker:run": "docker run -p 3838:3838 recoverysky-timezone:local",
+    "docker:tag": "docker tag recoverysky-timezone:local 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:latest",
+    "docker:push": "docker push 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:latest",
+    "start": "node dist/server/index.js start",
+    "start:debug": "node dist/server/index.js start --debug",
     "test": "jest",
     "test:watch": "jest --watch",
     "tz:update": "npx tzdata-update"
   },
   "dependencies": {
+    "@types/yargs": "^17.0.33",
     "bson-objectid": "^2.0.4",
     "dotenv": "^16.5.0",
     "express": "^4.19.2",
     "lodash": "^4.17.21",
-    "timezonecomplete": "^5.14.1"
+    "timezonecomplete": "^5.14.1",
+    "ts-rust-result": "^1.0.0",
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-secrets-manager": "^3.830.0",
@@ -30,6 +40,7 @@
     "@types/lodash": "^4.17.17",
     "@types/luxon": "^3.6.2",
     "@types/node": "^24.0.3",
+    "copyfiles": "^2.4.1",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.2",
     "jest": "^30.0.0",
