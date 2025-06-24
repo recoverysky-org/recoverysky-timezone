@@ -96,11 +96,47 @@ describe('fetchIANA', () => {
 				statusText: 'Internal Server Error'
 			});
 
-			const result = await updateTimezoneData('./test-dest', true);
+			const result = await updateTimezoneData('./test-dest', undefined, true);
 
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.message).toContain('Failed to fetch IANA data URL');
+			}
+		});
+
+		it('should skip download when current version matches fetched version', async () => {
+			// Read the test HTML file
+			const testHtml = await fs.readFile(path.join(__dirname, 'data/time-zones.html'), 'utf-8');
+
+			(global.fetch as jest.Mock).mockResolvedValueOnce({
+				ok: true,
+				text: () => Promise.resolve(testHtml)
+			});
+
+			const result = await updateTimezoneData('./test-dest', '2025b', true);
+
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.value.updated).toBe(false);
+				expect(result.value.version).toBe('2025b');
+			}
+		});
+
+		it('should proceed with download when current version is different', async () => {
+			// Read the test HTML file
+			const testHtml = await fs.readFile(path.join(__dirname, 'data/time-zones.html'), 'utf-8');
+
+			(global.fetch as jest.Mock).mockResolvedValueOnce({
+				ok: true,
+				text: () => Promise.resolve(testHtml)
+			});
+
+			const result = await updateTimezoneData('./test-dest', '2024a', true);
+
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.value.updated).toBe(true);
+				expect(result.value.version).toBe('2025b');
 			}
 		});
 	});
