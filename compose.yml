@@ -1,0 +1,16 @@
+services:
+  recoverysky-timezone:
+    container_name: recoverysky-timezone
+    platform: linux/arm64
+    image: 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:latest
+    restart: always
+    ports:
+      - "3838:3838"
+    command: ["node", "dist/server/index.js", "start", "--debug"]
+    networks:
+      - recoverysky-network
+
+networks:
+  recoverysky-network:
+    external: true
+

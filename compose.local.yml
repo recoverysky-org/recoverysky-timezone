@@ -1,0 +1,17 @@
+services:
+  recoverysky-timezone:
+    container_name: recoverysky-timezone
+    image: recoverysky-timezone:local
+    build:
+      context: .
+    restart: always
+    ports:
+      - "3838:3838"
+    command: ["node", "dist/server/index.js", "start", "--debug"]
+    networks:
+      - recoverysky-network
+
+networks:
+  recoverysky-network:
+    external: true
+
