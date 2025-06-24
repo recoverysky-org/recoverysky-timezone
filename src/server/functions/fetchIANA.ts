@@ -1,7 +1,7 @@
+import { exec } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { Result, ok, err, tryResult, map, mapErr, assert, assertNotNil } from '../../common/utils/RustResult';
+import { Result, assert, assertNotNil, err, mapErr, ok, tryResult } from 'ts-rust-result';
 
 /**
  * Fetches the IANA timezone page and extracts the URL for the "Data Only Distribution"
@@ -11,13 +11,13 @@ export async function fetchDataOnlyDistributionUrl(): Promise<Result<string>> {
 	return tryResult(async () => {
 		// Fetch the IANA timezone page
 		const response = await fetch('https://www.iana.org/time-zones');
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch IANA page: ${response.status} ${response.statusText}`);
 		}
-		
+
 		const html = await response.text();
-		
+
 		// Parse the HTML to find the table with class "iana-table"
 		const tableMatch = html.match(/<table class="iana-table">([\s\S]*?)<\/table>/);
 		if (!tableMatch) {
@@ -68,7 +68,7 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 		assertNotNil(destinationFolder, 'Destination folder is required');
 		assert(typeof url === 'string', new Error('URL must be a string'));
 		assert(typeof destinationFolder === 'string', new Error('Destination folder must be a string'));
-		
+
 		// Validate URL format
 		const urlCheck = await tryResult(async () => {
 			new URL(url);
@@ -76,13 +76,16 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 		if (!urlCheck.ok) {
 			throw new Error(`Invalid URL format: ${url}`);
 		}
-		
-		// Get correct script path based on runtime location
-		const isRunningFromDist = __dirname.includes('dist');
-		// Always reference from source since scripts aren't copied to dist/
-		const scriptPath = path.join(process.cwd(), 'src', 'scripts', 'downloadAndExtractTarball.zsh');
+
+		// Get correct script path based on environment
+		const scriptPath = process.env.NODE_ENV === 'production'
+			? path.join(process.cwd(), 'dist', 'server', 'scripts', 'downloadAndExtractTarball.sh')
+			: path.join(process.cwd(), 'src', 'server', 'scripts', 'downloadAndExtractTarball.sh');
 		const tmpDir = './tmp';
 		
+		console.log(`🔍 NODE_ENV: ${process.env.NODE_ENV}`);
+		console.log(`🔍 Script path: ${scriptPath}`);
+
 		// Check if script exists
 		const scriptCheck = await tryResult(async () => {
 			await fs.access(scriptPath);
@@ -90,32 +93,32 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 		if (!scriptCheck.ok) {
 			throw new Error(`Download script not found: ${scriptPath}`);
 		}
-		
+
 		console.log(`📥 Downloading tarball from: ${url}`);
-		
+
 		// Build command with optional --dry-run flag
 		const dryRunFlag = dryRun ? ' --dry-run' : '';
-		const command = `"${scriptPath}" "${url}" "${destinationFolder}" "${tmpDir}"${dryRunFlag}`;
-		
+		const command = `"/bin/sh" "${scriptPath}" "${url}" "${destinationFolder}" "${tmpDir}"${dryRunFlag}`;
+
 		// Execute the shell script with timeout
 		const result = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve, reject) => {
 			const timeout = setTimeout(() => {
 				reject(new Error('Script execution timed out after 1 minute'));
 			}, 60 * 1000);
-			
+
 			const child = exec(command, {
 				maxBuffer: 1024 * 1024,
 				timeout: 60 * 1000
 			}, (error, stdout, stderr) => {
 				clearTimeout(timeout);
-				
+
 				if (error) {
-					const errorMessage = typeof error.code === 'string' ? 
+					const errorMessage = typeof error.code === 'string' ?
 						(error.code === 'ENOENT' ? `Script not found: ${scriptPath}` :
-						error.code === 'EACCES' ? `Permission denied: ${scriptPath}` :
-						`System error: ${error.code}`) :
+							error.code === 'EACCES' ? `Permission denied: ${scriptPath}` :
+								`System error: ${error.code}`) :
 						error.signal ? `Terminated by signal: ${error.signal}` :
-						`Script error: ${error.message}`;
+							`Script error: ${error.message}`;
 					reject(new Error(errorMessage));
 				} else {
 					resolve({
@@ -125,17 +128,17 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 					});
 				}
 			});
-			
+
 			child.on('error', (error) => {
 				clearTimeout(timeout);
 				reject(new Error(`Process error: ${error.message}`));
 			});
 		});
-		
+
 		// Handle script output
 		if (result.stdout) console.log(result.stdout);
 		if (result.stderr) console.error(result.stderr);
-		
+
 		// Map exit codes to errors
 		if (result.code !== 0) {
 			const errorMessages: { [key: number]: string } = {
@@ -147,11 +150,11 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 				6: 'Failed to copy files to destination directory',
 				7: 'Failed to cleanup temporary files'
 			};
-			
+
 			const errorMessage = errorMessages[result.code] || `Script failed with exit code ${result.code}`;
 			throw new Error(`Download and extraction failed: ${errorMessage}`);
 		}
-		
+
 		console.log(`✅ Successfully downloaded and extracted to: ${destinationFolder}`);
 	});
 }
@@ -167,32 +170,32 @@ export async function updateTimezoneData(destinationFolder: string, currentVersi
 	// Step 1: Fetch the data URL
 	const urlResult = await fetchDataOnlyDistributionUrl();
 	if (!urlResult.ok) {
-		return mapErr(urlResult, error => 
+		return mapErr(urlResult, error =>
 			new Error(`Failed to fetch IANA data URL: ${error.message}`)
 		);
 	}
-	
+
 	// Extract version from URL (e.g., "tzdata2025b.tar.gz" -> "2025b")
 	const versionMatch = urlResult.value.match(/tzdata(\d{4}[a-z])\.tar\.gz$/);
 	if (!versionMatch) {
 		return err(new Error(`Could not extract version from URL: ${urlResult.value}`));
 	}
 	const newVersion = versionMatch[1];
-	
+
 	// Check if we already have the latest version
 	if (currentVersion && currentVersion === newVersion) {
 		console.log(`📅 Timezone data is already up to date (version ${currentVersion})`);
 		return ok({ updated: false, version: newVersion });
 	}
-	
+
 	// Step 2: Download and extract the tarball
 	const downloadResult = await downloadAndExtractTarball(urlResult.value, destinationFolder, dryRun);
 	if (!downloadResult.ok) {
-		return mapErr(downloadResult, error => 
+		return mapErr(downloadResult, error =>
 			new Error(`Failed to download and extract tarball: ${error.message}`)
 		);
 	}
-	
+
 	console.log(`📅 Updated timezone data from ${currentVersion || 'unknown'} to ${newVersion}`);
 	return ok({ updated: true, version: newVersion });
 } 
