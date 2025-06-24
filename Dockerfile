@@ -35,4 +35,4 @@ RUN if [ ! -d "node_modules" ]; then pnpm install --frozen-lockfile; fi
 EXPOSE 3838
 
 # Start the application
-CMD ["node", "dist/server/index.js"]
+CMD ["node", "dist/index.js", "start"]

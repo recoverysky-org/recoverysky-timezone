@@ -6,7 +6,7 @@ services:
     restart: always
     ports:
       - "3838:3838"
-    command: ["node", "dist/server/index.js", "start", "--debug"]
+    command: ["node", "dist/index.js", "start", "--debug"]
     networks:
       - recoverysky-network
 
