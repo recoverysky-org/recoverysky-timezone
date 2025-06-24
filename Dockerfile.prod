@@ -1,0 +1,47 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Dockerfile reference guide at
+# https://docs.docker.com/go/dockerfile-reference/
+
+# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+
+# Use Node.js Alpine for smaller image size
+FROM node:22-alpine
+
+ENV NODE_ENV=production
+
+# Set working directory
+WORKDIR /app
+
+# Install curl and build dependencies
+RUN apk add --no-cache curl
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Copy package files first for better caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY src/ ./src
+COPY tsconfig.json tsup.config.ts ./
+
+# Build the application
+RUN pnpm build
+
+# Copy scripts and config files to dist
+RUN pnpm postbuild
+
+# Make scripts executable
+RUN chmod +x dist/server/scripts/*.sh
+
+# Clean up source files to reduce image size
+RUN rm -rf src/ tsconfig.json tsup.config.ts
+
+# Expose the port the app runs on
+EXPOSE 3838
+
+# Start the application
+CMD ["node", "dist/server/index.js"]

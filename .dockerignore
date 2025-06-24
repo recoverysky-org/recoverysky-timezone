@@ -1,0 +1,30 @@
+# Development files
+.git/
+.gitignore
+.env
+*.log
+.DS_Store
+.vscode/
+coverage/
+.nyc_output/
+
+# Documentation
+README.md
+*.md
+
+# Development configs
+jest.config.js
+tsconfig*.json
+tsup.config.ts
+rollup.config.ts
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+
+# Tests (not needed for production build)
+tests/ 
