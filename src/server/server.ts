@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import { tryResult } from 'ts-rust-result';
-import { convertToTimeZone } from './functions/convertToTimeZone';
+import { toTz } from './functions/to-tz';
 import { setupTimezoneData } from './functions/setupTimezoneData';
 import { logger } from './logger';
 import { getCurrentTzOffset } from './functions/getCurrentTzOffset';
@@ -55,15 +55,15 @@ app.post('/api/v1/to-tz', async (req, res) => {
   /**
    * @param isoString - (required)The ISO string to convert (note UTC offset is ignored)
    * @param sourceTimeZone - (required) The timezone to convert from
-   * @param toTimeZone - (defaults UTC) The timezone to convert to
-   * @returns The converted ISO string
+   * @param targetTimeZone - (defaults UTC) The timezone to convert to
+   * @returns The isoString in the target timezone
    */
-  const { isoString, sourceTimeZone, toTimeZone } = req.body;
+  const { isoString, sourceTimeZone, targetTimeZone } = req.body;
 
-  logger.debug(`Converting ${isoString} from ${sourceTimeZone} to ${toTimeZone}`, { ip: req.ip });
+  logger.debug(`Converting ${isoString} from ${sourceTimeZone} to ${targetTimeZone}`, { ip: req.ip });
 
   // Convert ISO string to UTC
-  const result = await tryResult(async () => await convertToTimeZone(isoString, sourceTimeZone, toTimeZone));
+  const result = await tryResult(async () => await toTz(isoString, sourceTimeZone, targetTimeZone));
   if (!result.ok) {
     logger.error(`Conversion failed: ${result.error.message}`, { ip: req.ip });
     return res.status(400).json(result);
@@ -76,7 +76,7 @@ app.post('/api/v1/to-tz', async (req, res) => {
 app.post('/api/v1/tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
-   * @returns The current UTC offset difference between the two timezones
+   * @returns The current UTC offset difference between the sourceTimeZone and UTC
    */
   const { sourceTimeZone } = req.body;
 

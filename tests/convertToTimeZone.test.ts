@@ -1,4 +1,4 @@
-import { convertToTimeZone } from '../src/server/functions/convertToTimeZone';
+import { toTz } from '../src/server/functions/to-tz';
 import { isOk, isErr, Result } from 'ts-rust-result';
 import { describe, it, expect } from 'vitest';
 import { faker } from '@faker-js/faker';
@@ -21,9 +21,9 @@ const COMMON_TIMEZONES = [
 	'Pacific/Auckland'
 ];
 
-describe('convertToTimeZone', () => {
+describe('toTz', () => {
 	it('converts from New York to UTC correctly', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-01-15T10:30:00',
 			'America/New_York',
 			'UTC'
@@ -39,7 +39,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('converts from Tokyo to London correctly', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-06-15T14:00:00',
 			'Asia/Tokyo',
 			'Europe/London'
@@ -55,7 +55,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('converts from UTC to Pacific time correctly', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-07-15T20:00:00',
 			'UTC',
 			'America/Los_Angeles'
@@ -71,7 +71,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('handles same timezone conversion (no change)', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-03-15T12:00:00',
 			'UTC',
 			'UTC'
@@ -87,7 +87,7 @@ describe('convertToTimeZone', () => {
 
 	it('handles daylight saving time transitions', async () => {
 		// Test during DST transition in March (spring forward)
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-03-10T02:30:00',
 			'America/New_York',
 			'UTC'
@@ -102,7 +102,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('returns error for invalid source timezone', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-01-15T10:30:00',
 			'Invalid/Timezone',
 			'UTC'
@@ -116,7 +116,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('returns error for invalid target timezone', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-01-15T10:30:00',
 			'UTC',
 			'Invalid/Timezone'
@@ -131,7 +131,7 @@ describe('convertToTimeZone', () => {
 
 	it('returns error for missing isoString', async () => {
 		// @ts-ignore - Testing null input
-		const result = await convertToTimeZone(null, 'UTC', 'America/New_York');
+		const result = await toTz(null, 'UTC', 'America/New_York');
 
 		expect(isErr(result)).toBe(true);
 		if (isErr(result)) {
@@ -141,7 +141,7 @@ describe('convertToTimeZone', () => {
 
 	it('returns error for missing sourceTimeZone', async () => {
 		// @ts-ignore - Testing null input
-		const result = await convertToTimeZone('2024-01-15T10:30:00', null, 'America/New_York');
+		const result = await toTz('2024-01-15T10:30:00', null, 'America/New_York');
 
 		expect(isErr(result)).toBe(true);
 		if (isErr(result)) {
@@ -149,18 +149,20 @@ describe('convertToTimeZone', () => {
 		}
 	});
 
-	it('returns error for missing toTimeZone', async () => {
+	it('returns error for missing targetTimeZone', async () => {
 		// @ts-ignore - Testing null input
-		const result = await convertToTimeZone('2024-01-15T10:30:00', 'UTC', null);
+		const result = await toTz('2024-01-15T10:30:00', 'UTC', null);
 
-		expect(isErr(result)).toBe(true);
-		if (isErr(result)) {
-			expect(result.error.message).toMatch(/toTimeZone is required/i);
+		expect(isOk(result)).toBe(true);
+		if (isOk(result)) {
+			// Should default to UTC
+			expect(result.value.iso).toMatch(/^2024-01-15T10:30:00/);
+			expect(result.value.millis).toBeGreaterThan(0);
 		}
 	});
 
 	it('handles edge case of midnight conversion', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-01-15T00:00:00',
 			'America/New_York',
 			'UTC'
@@ -175,7 +177,7 @@ describe('convertToTimeZone', () => {
 	});
 
 	it('handles edge case of end of day conversion', async () => {
-		const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+		const result: Result<{ iso: string; millis: number }> = await toTz(
 			'2024-01-15T23:59:59',
 			'America/New_York',
 			'UTC'
@@ -195,14 +197,14 @@ describe('convertToTimeZone', () => {
 			// Run 10 random conversions
 			for (let i = 0; i < 10; i++) {
 				const fromTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
-				const toTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
+				const targetTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
 				const randomDate = faker.date.between({ from: '2020-01-01', to: '2030-12-31' });
 				const isoString = randomDate.toISOString().slice(0, 19); // Remove milliseconds
 
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result)).toBe(true);
@@ -217,17 +219,17 @@ describe('convertToTimeZone', () => {
 
 		it('handles random times throughout the day', async () => {
 			const fromTz = 'UTC';
-			const toTz = 'America/New_York';
+			const targetTz = 'America/New_York';
 
 			// Test random times throughout a day
 			for (let i = 0; i < 24; i++) {
 				const hour = i.toString().padStart(2, '0');
 				const isoString = `2024-06-15T${hour}:30:00`;
 
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result)).toBe(true);
@@ -242,17 +244,17 @@ describe('convertToTimeZone', () => {
 
 		it('handles random dates across different years', async () => {
 			const fromTz = 'Europe/London';
-			const toTz = 'Asia/Tokyo';
+			const targetTz = 'Asia/Tokyo';
 
 			// Test random dates across different years
 			for (let i = 0; i < 20; i++) {
 				const randomDate = faker.date.between({ from: '2010-01-01', to: '2030-12-31' });
 				const isoString = randomDate.toISOString().slice(0, 19);
 
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result)).toBe(true);
@@ -273,7 +275,7 @@ describe('convertToTimeZone', () => {
 				const isoString = faker.date.recent().toISOString().slice(0, 19);
 
 				// Test invalid source timezone
-				const result1: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result1: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					invalidTz,
 					validTz
@@ -282,7 +284,7 @@ describe('convertToTimeZone', () => {
 				expect(isErr(result1)).toBe(true);
 
 				// Test invalid target timezone
-				const result2: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result2: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					validTz,
 					invalidTz
@@ -294,7 +296,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles random edge case times', async () => {
 			const fromTz = 'America/Los_Angeles';
-			const toTz = 'UTC';
+			const targetTz = 'UTC';
 
 			// Test edge case times: midnight, noon, end of day
 			const edgeTimes = [
@@ -309,10 +311,10 @@ describe('convertToTimeZone', () => {
 			for (const time of edgeTimes) {
 				const isoString = `2024-03-15T${time}`;
 
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					isoString,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result)).toBe(true);
@@ -327,23 +329,23 @@ describe('convertToTimeZone', () => {
 		it('maintains consistency with round-trip conversions (UTC only)', async () => {
 			// Only use UTC for true round-trip reversibility
 			const fromTz = 'UTC';
-			const toTz = 'UTC';
+			const targetTz = 'UTC';
 			for (let i = 0; i < 10; i++) {
 				const originalTime = faker.date.recent().toISOString().slice(0, 19);
 
-				// Convert fromTz → toTz
-				const result1: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				// Convert fromTz → targetTz
+				const result1: Result<{ iso: string; millis: number }> = await toTz(
 					originalTime,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result1)).toBe(true);
 				if (isOk(result1)) {
-					// Convert back toTz → fromTz
-					const result2: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+					// Convert back targetTz → fromTz
+					const result2: Result<{ iso: string; millis: number }> = await toTz(
 						result1.value.iso,
-						toTz,
+						targetTz,
 						fromTz
 					);
 
@@ -372,7 +374,7 @@ describe('convertToTimeZone', () => {
 
 			for (let i = 0; i < 15; i++) {
 				const fromTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
-				const toTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
+				const targetTz = faker.helpers.arrayElement(COMMON_TIMEZONES);
 				
 				// Pick a random safe date range
 				const dateRange = faker.helpers.arrayElement(safeDateRanges);
@@ -382,19 +384,19 @@ describe('convertToTimeZone', () => {
 				});
 				const originalTime = randomDate.toISOString().slice(0, 19);
 
-				// Convert fromTz → toTz
-				const result1: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				// Convert fromTz → targetTz
+				const result1: Result<{ iso: string; millis: number }> = await toTz(
 					originalTime,
 					fromTz,
-					toTz
+					targetTz
 				);
 
 				expect(isOk(result1)).toBe(true);
 				if (isOk(result1)) {
-					// Convert back toTz → fromTz
-					const result2: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+					// Convert back targetTz → fromTz
+					const result2: Result<{ iso: string; millis: number }> = await toTz(
 						result1.value.iso,
-						toTz,
+						targetTz,
 						fromTz
 					);
 
@@ -418,7 +420,7 @@ describe('convertToTimeZone', () => {
 		it('handles spring forward DST transition (nonexistent time)', async () => {
 			// March 10, 2024 - Spring forward in US
 			// 2:30 AM doesn't exist because clocks jump from 2:00 AM to 3:00 AM
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-03-10T02:30:00',
 				'America/New_York',
 				'UTC'
@@ -433,7 +435,7 @@ describe('convertToTimeZone', () => {
 		it('handles fall back DST transition (ambiguous time)', async () => {
 			// November 3, 2024 - Fall back in US
 			// 1:30 AM happens twice - once in EDT, once in EST
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-11-03T01:30:00',
 				'America/New_York',
 				'UTC'
@@ -445,7 +447,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles leap second day', async () => {
 			// June 30, 2015 had a leap second
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2015-06-30T23:59:60', // 23:59:60 is the leap second
 				'UTC',
 				'America/New_York'
@@ -457,7 +459,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles very old dates (pre-1970)', async () => {
 			// Test with dates before Unix epoch
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'1969-07-20T20:17:00', // Apollo 11 moon landing
 				'America/New_York',
 				'UTC'
@@ -468,7 +470,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles very future dates (post-2038)', async () => {
 			// Test with dates after 2038 (32-bit Unix time overflow)
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2050-01-01T00:00:00',
 				'UTC',
 				'America/Los_Angeles'
@@ -484,7 +486,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles timezone with fractional offsets', async () => {
 			// Some timezones have fractional hour offsets (like India: UTC+5:30)
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-06-15T12:00:00',
 				'Asia/Kolkata', // UTC+5:30
 				'UTC'
@@ -500,7 +502,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles international date line crossing', async () => {
 			// Test conversion that crosses the international date line
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-06-15T23:00:00',
 				'Pacific/Auckland', // UTC+12
 				'America/Los_Angeles' // UTC-7
@@ -517,7 +519,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles year boundary with timezone conversion', async () => {
 			// Test conversion around New Year's Eve/Day
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-12-31T23:30:00',
 				'America/New_York', // UTC-5
 				'Asia/Tokyo' // UTC+9
@@ -533,7 +535,7 @@ describe('convertToTimeZone', () => {
 
 		it('handles edge case of 23:59:59 on year boundary', async () => {
 			// Test the very last second of the year
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'2024-12-31T23:59:59',
 				'UTC',
 				'America/Los_Angeles' // UTC-8 in winter
@@ -549,7 +551,7 @@ describe('convertToTimeZone', () => {
 		it('handles timezone with historical rule changes', async () => {
 			// Test with a timezone that has had rule changes
 			// Europe/London switched to permanent BST during WWII
-			const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+			const result: Result<{ iso: string; millis: number }> = await toTz(
 				'1941-07-01T12:00:00',
 				'Europe/London',
 				'UTC'
@@ -572,7 +574,7 @@ describe('convertToTimeZone', () => {
 			];
 
 			for (const invalidFormat of invalidFormats) {
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					invalidFormat,
 					'UTC',
 					'America/New_York'
@@ -591,7 +593,7 @@ describe('convertToTimeZone', () => {
 			const emptyStrings = ['', '   ', '\t\n'];
 
 			for (const emptyString of emptyStrings) {
-				const result: Result<{ iso: string; millis: number }> = await convertToTimeZone(
+				const result: Result<{ iso: string; millis: number }> = await toTz(
 					emptyString,
 					'UTC',
 					'America/New_York'
