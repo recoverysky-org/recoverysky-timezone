@@ -1,5 +1,6 @@
 import { DateTime, zone } from 'timezonecomplete';
-import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
+import { assertNotNil, ok, err, Result, tryResult, unwrap } from 'ts-rust-result';
+import { isDst } from './is-dst';
 
 /**
  * Gets the current UTC offset between two timezones
@@ -17,9 +18,10 @@ import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
  * 
  * @param sourceTimeZone - The IANA timezone identifier (e.g., 'America/New_York', 'Europe/London')
  * @param targetTimeZone - The target timezone to calculate offset against (defaults to 'UTC')
- * @returns Promise<Result<{ iso: string; signedStr: string; millis: number }>> - Object containing:
+ * @returns Promise<Result<{ iso: string; signedStr: string; dst: boolean; millis: number }>> - Object containing:
  *   - iso: ISO string representation of the current time in source timezone
  *   - signedStr: Offset as signed string (e.g., "+05:30", "-08:00", "+00:00")
+ *   - dst: Whether the source timezone is currently in DST
  *   - millis: Offset in milliseconds (positive = ahead, negative = behind target timezone)
  * 
  * @example
@@ -43,7 +45,7 @@ import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
 export async function getTzToTzOffset(
   sourceTimeZone: string,
   targetTimeZone: string = 'UTC'
-): Promise<Result<{ iso: string; signedStr: string; millis: number }>> {
+): Promise<Result<{ iso: string; signedStr: string; dst: boolean; millis: number }>> {
   // Validate required parameters using ts-rust-result assertions
   let result = assertNotNil(sourceTimeZone, 'sourceTimeZone is required', false);
   if (!result.ok) return result;
@@ -87,13 +89,14 @@ export async function getTzToTzOffset(
     const sign = isNegative ? '-' : '+';
     const hoursStr = hours.toString().padStart(2, '0');
     const minutesStr = minutes.toString().padStart(2, '0');
-    const signedStr = `${sign}${hoursStr}:${minutesStr}`;
+    const offset = `${sign}${hoursStr}:${minutesStr}`;
 
     // The offset is always relative to the current instant (now),
     // so it will reflect DST and any current rules for the zones.
     return ok({
       iso: currentTimeInSource.toIsoString(), // ISO string in source timezone
-      signedStr,
+      signedStr: offset,
+      dst: unwrap(isDst(currentTimeInSource)),
       millis: offsetMillis // Offset in milliseconds
     });
   } catch (error) {

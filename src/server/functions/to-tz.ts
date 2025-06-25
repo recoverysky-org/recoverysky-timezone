@@ -1,5 +1,6 @@
 import { DateTime, zone } from 'timezonecomplete';
-import { assertNotNil, err, ok, Result } from 'ts-rust-result';
+import { assertNotNil, err, ok, Result, unwrap } from 'ts-rust-result';
+import { isDst } from './is-dst';
 
 /**
  * Converts an ISO datetime string to UTC
@@ -26,6 +27,7 @@ export async function toTz(isoString: string, sourceTimeZone?: string, targetTim
 
     return ok({
       iso: target.toIsoString(), // Full ISO string with offset
+      dst: unwrap(isDst(target)),
       millis: target.unixUtcMillis()
     });
   } catch (error) {
