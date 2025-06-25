@@ -51,19 +51,19 @@ async function handleTimezoneSetup(): Promise<void> {
  * @param res - The response object
  * @returns The converted ISO string
  */
-app.post('/api/v1/convert-to-tz', async (req, res) => {
+app.post('/api/v1/to-tz', async (req, res) => {
   /**
    * @param isoString - (required)The ISO string to convert (note UTC offset is ignored)
-   * @param fromTimeZone - (required) The timezone to convert from
-   * @param toTimeZone - (required)The timezone to convert to
+   * @param sourceTimeZone - (required) The timezone to convert from
+   * @param toTimeZone - (defaults UTC) The timezone to convert to
    * @returns The converted ISO string
    */
-  const { isoString, fromTimeZone, toTimeZone } = req.body;
+  const { isoString, sourceTimeZone, toTimeZone } = req.body;
 
-  logger.debug(`Converting ${isoString} from ${fromTimeZone} to ${toTimeZone}`, { ip: req.ip });
+  logger.debug(`Converting ${isoString} from ${sourceTimeZone} to ${toTimeZone}`, { ip: req.ip });
 
   // Convert ISO string to UTC
-  const result = await tryResult(async () => await convertToTimeZone(isoString, fromTimeZone, toTimeZone));
+  const result = await tryResult(async () => await convertToTimeZone(isoString, sourceTimeZone, toTimeZone));
   if (!result.ok) {
     logger.error(`Conversion failed: ${result.error.message}`, { ip: req.ip });
     return res.status(400).json(result);
@@ -73,7 +73,7 @@ app.post('/api/v1/convert-to-tz', async (req, res) => {
   return res.json(result);
 });
 
-app.post('/api/v1/current-tz-offset', async (req, res) => {
+app.post('/api/v1/tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
    * @returns The current UTC offset difference between the two timezones
@@ -95,7 +95,7 @@ app.post('/api/v1/current-tz-offset', async (req, res) => {
 app.post('/api/v1/tz-to-tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
-   * @param targetTimeZone - (required) The target timezone to get offset for
+   * @param targetTimeZone - (defaults UTC) The target timezone to get offset for
    * @returns The current UTC offset difference between the two timezones
    */
   const { sourceTimeZone, targetTimeZone } = req.body;
