@@ -15,21 +15,22 @@ WORKDIR /app
 # Install curl (and clean up cache)
 RUN apk add --no-cache curl
 
-# Copy prebuilt code
-RUN mkdir -p dist
-COPY dist/ ./dist
-
-# Make dist/server/scripts executable
-RUN chmod +x dist/scripts/*.sh
-
 # Install pnpm globally
 RUN npm install -g pnpm@latest
 
 # Copy package files first for better caching
+# This layer will be cached unless package.json or pnpm-lock.yaml changes
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies only if node_modules doesn't exist (for cached builds)
-RUN if [ ! -d "node_modules" ]; then pnpm install --frozen-lockfile; fi
+# Install only production dependencies
+# This layer will be cached unless the above files change
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy prebuilt code
+COPY dist/ ./dist
+
+# Make dist/server/scripts executable
+RUN chmod +x dist/scripts/*.sh
 
 # Expose the port the app runs on
 EXPOSE 3838
