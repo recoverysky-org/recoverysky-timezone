@@ -1,12 +1,22 @@
 {
     "cSpell.words": [
+        "backzone",
         "buildx",
         "Jenova",
+        "leapseconds",
+        "LOCALTZ",
         "luxon",
         "millis",
+        "northamerica",
         "Pippa",
         "recoverysky",
+        "southamerica",
         "timezonecomplete",
-        "tzdata"
+        "tzdata",
+        "tzdir",
+        "Tzdir",
+        "TZDIR",
+        "zoneinfo",
+        "zonenow"
     ]
 }
