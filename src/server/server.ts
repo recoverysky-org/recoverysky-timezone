@@ -6,7 +6,6 @@ import { tryResult } from 'ts-rust-result';
 import { toTz } from './functions/to-tz';
 import { setupTimezoneData } from './functions/setupTimezoneData';
 import { logger } from './logger';
-import { getCurrentTzOffset } from './functions/getCurrentTzOffset';
 import { getTzToTzOffset } from './functions/getTzToTzOffset';
 import { asTz } from './functions/as-tz';
 
