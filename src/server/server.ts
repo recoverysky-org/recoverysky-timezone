@@ -8,6 +8,7 @@ import { setupTimezoneData } from './functions/setupTimezoneData';
 import { logger } from './logger';
 import { getCurrentTzOffset } from './functions/getCurrentTzOffset';
 import { getTzToTzOffset } from './functions/getTzToTzOffset';
+import { asTz } from './functions/as-tz';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -46,9 +47,33 @@ async function handleTimezoneSetup(): Promise<void> {
 }
 
 /**
+ * Converts a UTC milliseconds to a timezone string
+ * @returns Promise<Result<{ iso: string }>> - ISO string in target timezone or error
+ */
+app.post('/api/v1/as-tz', async (req, res) => {
+  /**
+   * Converts a UTC milliseconds to a timezone string
+   * @param mills - The UTC milliseconds
+   * @param targetTimeZone - The IANA timezone to return as a string
+   * @returns Promise<Result<{ iso: string }>> - ISO string in target timezone or error
+   */
+  const { millis, targetTimeZone } = req.body;
+
+  logger.debug(`Converting UTC milliseconds ${millis} to ${targetTimeZone}`, { ip: req.ip });
+
+  // Convert UTC milliseconds to target timezone ISO string
+  const result = await tryResult(async () => await asTz(millis, targetTimeZone));
+  if (!result.ok) {
+    logger.error(`Conversion failed: ${result.error.message}`, { ip: req.ip });
+    return res.status(400).json(result);
+  }
+
+  logger.debug(`Conversion successful: ${JSON.stringify(result.value)}`, { ip: req.ip });
+  return res.json(result);
+});
+
+/**
  * Convert a ISO string to a specific timezone
- * @param req - The request object
- * @param res - The response object
  * @returns The converted ISO string
  */
 app.post('/api/v1/to-tz', async (req, res) => {
@@ -73,26 +98,11 @@ app.post('/api/v1/to-tz', async (req, res) => {
   return res.json(result);
 });
 
+/**
+ * Gets the current UTC offset for a given timezone
+ * @returns The current UTC offset for the given timezone
+ */
 app.post('/api/v1/tz-offset', async (req, res) => {
-  /**
-   * @param sourceTimeZone - (required) The source timezone to get offset for
-   * @returns The current UTC offset difference between the sourceTimeZone and UTC
-   */
-  const { sourceTimeZone } = req.body;
-
-  logger.debug(`Getting current UTC offset from ${sourceTimeZone}`, { ip: req.ip });
-
-  const result = await tryResult(async () => await getCurrentTzOffset(sourceTimeZone))
-  if (!result.ok) {
-    logger.error(`Current UTC offset failed: ${result.error.message}`, { ip: req.ip });
-    return res.status(400).json(result);
-  }
-
-  logger.debug(`Current UTC offset successful: ${JSON.stringify(result.value)}`, { ip: req.ip });
-  return res.json(result);
-});
-
-app.post('/api/v1/tz-to-tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
    * @param targetTimeZone - (defaults UTC) The target timezone to get offset for
@@ -118,7 +128,7 @@ app.post('/api/v1/tz-to-tz-offset', async (req, res) => {
 export async function startServer(): Promise<void> {
   try {
     console.log('🚀 Starting server...');
-    
+
     // Initial setup on server startup
     console.log('🔄 Starting timezone setup...');
     await handleTimezoneSetup();
@@ -136,6 +146,6 @@ export async function startServer(): Promise<void> {
     logger.error(`Server crashed: ${error.message}`);
     console.error('💥 Full error:', error);
     throw error; // Re-throw to see the full stack trace
-   }
+  }
 }
 

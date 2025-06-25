@@ -30,8 +30,8 @@ importers:
         specifier: ^5.14.1
         version: 5.14.1
       ts-rust-result:
-        specifier: ^1.3.2
-        version: 1.3.2
+        specifier: ^1.3.5
+        version: 1.3.5
       yargs:
         specifier: ^18.0.0
         version: 18.0.0
@@ -2722,8 +2722,8 @@ packages:
       '@swc/wasm':
         optional: true
 
-  ts-rust-result@1.3.2:
-    resolution: {integrity: sha512-RJdCFYek1SKfLnf0nR+XSHyjpl2aN3parhuvxvWI3PPEYCu3V5y526HO08nNtwxX26HcpGynniFHzg5a5Apt2A==}
+  ts-rust-result@1.3.5:
+    resolution: {integrity: sha512-dgqgsS/P1oS50bTHdOpkX3A0vAuPk1kcu6BZ1Mny371almI4ZdmtaUceHyghyDEp5ZcYfWPoOq/R8ETSlOkNGA==}
     engines: {node: '>=22.0.0'}
 
   tsconfig-paths@4.2.0:
@@ -5938,7 +5938,7 @@ snapshots:
     optionalDependencies:
       '@swc/core': 1.12.6
 
-  ts-rust-result@1.3.2: {}
+  ts-rust-result@1.3.5: {}
 
   tsconfig-paths@4.2.0:
     dependencies:

@@ -35,7 +35,7 @@
     "express": "^4.19.2",
     "lodash": "^4.17.21",
     "timezonecomplete": "^5.14.1",
-    "ts-rust-result": "^1.3.2",
+    "ts-rust-result": "^1.3.5",
     "yargs": "^18.0.0"
   },
   "devDependencies": {
