@@ -17,23 +17,25 @@ import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
  * 
  * @param sourceTimeZone - The IANA timezone identifier (e.g., 'America/New_York', 'Europe/London')
  * @param targetTimeZone - The target timezone to calculate offset against (defaults to 'UTC')
- * @returns Promise<Result<{ iso: string; millis: number }>> - Object containing:
+ * @returns Promise<Result<{ iso: string; signedStr: string; millis: number }>> - Object containing:
  *   - iso: ISO string representation of the current time in source timezone
+ *   - signedStr: Offset as signed string (e.g., "+05:30", "-08:00", "+00:00")
  *   - millis: Offset in milliseconds (positive = ahead, negative = behind target timezone)
  * 
  * @example
  * // Get offset from New York to UTC
- * const result = await getCurrentUtcOffset('America/New_York');
+ * const result = await getCurrentTzOffset('America/New_York');
  * if (result.ok) {
  *   console.log(`Current time: ${result.value.iso}`);
- *   console.log(`Offset from UTC: ${result.value.millis}ms`);
+ *   console.log(`Offset from UTC: ${result.value.signedStr}`);
+ *   console.log(`Offset in ms: ${result.value.millis}ms`);
  * }
  * 
  * @example
  * // Get offset from Tokyo to London
- * const result = await getCurrentUtcOffset('Asia/Tokyo', 'Europe/London');
+ * const result = await getCurrentTzOffset('Asia/Tokyo', 'Europe/London');
  * if (result.ok) {
- *   console.log(`Tokyo is ${result.value.millis}ms ahead of London`);
+ *   console.log(`Tokyo is ${result.value.signedStr} ahead of London`);
  * }
  * 
  * @throws {Error} If timezone identifiers are invalid or timezonecomplete is not initialized
@@ -41,7 +43,7 @@ import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
 export async function getCurrentTzOffset(
   sourceTimeZone: string,
   targetTimeZone: string = 'UTC'
-): Promise<Result<{ iso: string; millis: number }>> {
+): Promise<Result<{ iso: string; signedStr: string; millis: number }>> {
   // Validate required parameters using ts-rust-result assertions
   let result = assertNotNil(sourceTimeZone, 'sourceTimeZone is required', false);
   if (!result.ok) return result;
@@ -75,10 +77,23 @@ export async function getCurrentTzOffset(
     // This is robust for DST and all IANA timezones
     const offsetMillis = sourceOffsetMillis - targetOffsetMillis;
 
+    // Convert offsetMillis into a signed string like "+05:30" or "-08:00"
+    const isNegative = offsetMillis < 0;
+    const absOffsetMillis = Math.abs(offsetMillis);
+    const hours = Math.floor(absOffsetMillis / 3600000);
+    const minutes = Math.floor((absOffsetMillis % 3600000) / 60000);
+    
+    // Format with proper sign and zero-padding
+    const sign = isNegative ? '-' : '+';
+    const hoursStr = hours.toString().padStart(2, '0');
+    const minutesStr = minutes.toString().padStart(2, '0');
+    const signedStr = `${sign}${hoursStr}:${minutesStr}`;
+
     // The offset is always relative to the current instant (now),
     // so it will reflect DST and any current rules for the zones.
     return ok({
       iso: currentTimeInSource.toIsoString(), // ISO string in source timezone
+      signedStr,
       millis: offsetMillis // Offset in milliseconds
     });
   } catch (error) {
