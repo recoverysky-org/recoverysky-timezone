@@ -7,6 +7,7 @@ import { convertToTimeZone } from './functions/convertToTimeZone';
 import { setupTimezoneData } from './functions/setupTimezoneData';
 import { logger } from './logger';
 import { getCurrentTzOffset } from './functions/getCurrentTzOffset';
+import { getTzToTzOffset } from './functions/getTzToTzOffset';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -75,6 +76,25 @@ app.post('/api/v1/convert-to-tz', async (req, res) => {
 app.post('/api/v1/current-tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
+   * @returns The current UTC offset difference between the two timezones
+   */
+  const { sourceTimeZone } = req.body;
+
+  logger.debug(`Getting current UTC offset from ${sourceTimeZone}`, { ip: req.ip });
+
+  const result = await tryResult(async () => await getCurrentTzOffset(sourceTimeZone))
+  if (!result.ok) {
+    logger.error(`Current UTC offset failed: ${result.error.message}`, { ip: req.ip });
+    return res.status(400).json(result);
+  }
+
+  logger.debug(`Current UTC offset successful: ${JSON.stringify(result.value)}`, { ip: req.ip });
+  return res.json(result);
+});
+
+app.post('/api/v1/tz-to-tz-offset', async (req, res) => {
+  /**
+   * @param sourceTimeZone - (required) The source timezone to get offset for
    * @param targetTimeZone - (required) The target timezone to get offset for
    * @returns The current UTC offset difference between the two timezones
    */
@@ -82,7 +102,7 @@ app.post('/api/v1/current-tz-offset', async (req, res) => {
 
   logger.debug(`Getting current UTC offset from ${sourceTimeZone} to ${targetTimeZone}`, { ip: req.ip });
 
-  const result = await tryResult(async () => await getCurrentTzOffset(sourceTimeZone, targetTimeZone))
+  const result = await tryResult(async () => await getTzToTzOffset(sourceTimeZone, targetTimeZone))
   if (!result.ok) {
     logger.error(`Current UTC offset failed: ${result.error.message}`, { ip: req.ip });
     return res.status(400).json(result);
