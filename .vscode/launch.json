@@ -5,11 +5,10 @@
             "name": "Debug Server",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+            "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
             "args": [
-                "-r",
-                "tsconfig-paths/register",
-                "${workspaceFolder}/src/server/server.ts"
+                "${workspaceFolder}/src/server/index.ts",
+                "start"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
@@ -21,41 +20,58 @@
             ]
         },
         {
-            "name": "Debug Jest Tests",
+            "name": "Debug Vitest Tests",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+            "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
             "args": [
-                "--runInBand",
-                "--no-cache",
+                "run",
                 "--config",
-                "${workspaceFolder}/jest.config.js"
+                "${workspaceFolder}/vitest.config.ts"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "env": {
-                "NODE_OPTIONS": "--require tsconfig-paths/register"
+                "NODE_ENV": "test"
             },
             "skipFiles": [
                 "<node_internals>/**"
             ]
         },
         {
-            "name": "Debug Current Jest Test",
+            "name": "Debug Current Vitest Test",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+            "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
             "args": [
-                "--runInBand",
-                "--no-cache",
+                "run",
                 "--config",
-                "${workspaceFolder}/jest.config.js",
+                "${workspaceFolder}/vitest.config.ts",
                 "${file}"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "env": {
-                "NODE_OPTIONS": "--require tsconfig-paths/register"
+                "NODE_ENV": "test"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Debug Vitest UI",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+            "args": [
+                "--ui",
+                "--config",
+                "${workspaceFolder}/vitest.config.ts"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "env": {
+                "NODE_ENV": "test"
             },
             "skipFiles": [
                 "<node_internals>/**"

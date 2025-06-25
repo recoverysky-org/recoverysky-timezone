@@ -1,9 +1,10 @@
-import { getCurrentUtcOffset } from '../dist/server/functions/getCurrentUtcOffset.js';
+import { getCurrentTzOffset } from '../src/server/functions/getCurrentTzOffset';
 import { isOk, isErr, Result } from 'ts-rust-result';
+import { describe, it, expect } from 'vitest';
 
 describe('getCurrentUtcOffset', () => {
     it('returns correct offset from New York to UTC', async () => {
-        const result: Result<{ iso: string; millis: number }> = await getCurrentUtcOffset('America/New_York');
+        const result: Result<{ iso: string; millis: number }> = await getCurrentTzOffset('America/New_York');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -16,7 +17,7 @@ describe('getCurrentUtcOffset', () => {
     });
 
     it('returns correct offset from Tokyo to London', async () => {
-        const result: Result<{ iso: string; millis: number }> = await getCurrentUtcOffset('Asia/Tokyo', 'Europe/London');
+        const result: Result<{ iso: string; millis: number }> = await getCurrentTzOffset('Asia/Tokyo', 'Europe/London');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -28,7 +29,7 @@ describe('getCurrentUtcOffset', () => {
     });
 
     it('returns zero offset for same timezone', async () => {
-        const result: Result<{ iso: string; millis: number }> = await getCurrentUtcOffset('UTC', 'UTC');
+        const result: Result<{ iso: string; millis: number }> = await getCurrentTzOffset('UTC', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -37,7 +38,7 @@ describe('getCurrentUtcOffset', () => {
     });
 
     it('returns error for invalid timezone', async () => {
-        const result: Result<{ iso: string; millis: number }> = await getCurrentUtcOffset('Invalid/Timezone');
+        const result: Result<{ iso: string; millis: number }> = await getCurrentTzOffset('Invalid/Timezone');
         
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
@@ -47,7 +48,8 @@ describe('getCurrentUtcOffset', () => {
     });
 
     it('returns error for missing source timezone', async () => {
-        const result = await getCurrentUtcOffset();
+        // @ts-ignore
+        const result = await getCurrentTzOffset(null);
         
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {

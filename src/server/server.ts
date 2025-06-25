@@ -6,7 +6,7 @@ import { tryResult } from 'ts-rust-result';
 import { convertToTimeZone } from './functions/convertToTimeZone';
 import { setupTimezoneData } from './functions/setupTimezoneData';
 import { logger } from './logger';
-import { getCurrentUtcOffset } from './functions/getCurrentUtcOffset';
+import { getCurrentTzOffset } from './functions/getCurrentTzOffset';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -72,7 +72,7 @@ app.post('/api/v1/convert-to-tz', async (req, res) => {
   return res.json(result);
 });
 
-app.post('/api/v1/current-utc-offset', async (req, res) => {
+app.post('/api/v1/current-tz-offset', async (req, res) => {
   /**
    * @param sourceTimeZone - (required) The source timezone to get offset for
    * @param targetTimeZone - (required) The target timezone to get offset for
@@ -82,7 +82,7 @@ app.post('/api/v1/current-utc-offset', async (req, res) => {
 
   logger.debug(`Getting current UTC offset from ${sourceTimeZone} to ${targetTimeZone}`, { ip: req.ip });
 
-  const result = await tryResult(async () => await getCurrentUtcOffset(sourceTimeZone, targetTimeZone));
+  const result = await tryResult(async () => await getCurrentTzOffset(sourceTimeZone, targetTimeZone))
   if (!result.ok) {
     logger.error(`Current UTC offset failed: ${result.error.message}`, { ip: req.ip });
     return res.status(400).json(result);
@@ -97,8 +97,12 @@ app.post('/api/v1/current-utc-offset', async (req, res) => {
  */
 export async function startServer(): Promise<void> {
   try {
+    console.log('🚀 Starting server...');
+    
     // Initial setup on server startup
+    console.log('🔄 Starting timezone setup...');
     await handleTimezoneSetup();
+    console.log('✅ Timezone setup completed');
 
     // Set up timer to refresh timezone data every minute
     setInterval(handleTimezoneSetup, 60 * 1000);
@@ -108,8 +112,10 @@ export async function startServer(): Promise<void> {
       logger.success(`⏱️ Timezone conversion API running at http://localhost:${port}`);
       logger.debug('Debug mode enabled 🌼');
     });
-  } catch (error) {
-    logger.error('Server crashed', { error });
+  } catch (error: any) {
+    logger.error(`Server crashed: ${error.message}`);
+    console.error('💥 Full error:', error);
+    throw error; // Re-throw to see the full stack trace
    }
 }
 

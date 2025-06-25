@@ -1,57 +1,56 @@
 import { exec } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Result, assert, assertNotNil, err, mapErr, ok, tryResult } from 'ts-rust-result';
+import { Err, Result, assert, assertNotNil, err, mapErr, ok, tryResult } from 'ts-rust-result';
 
 /**
  * Fetches the IANA timezone page and extracts the URL for the "Data Only Distribution"
  * @returns Promise<Result<string>> - The URL for the data-only distribution or an error
  */
 export async function fetchDataOnlyDistributionUrl(): Promise<Result<string>> {
-	return tryResult(async () => {
-		// Fetch the IANA timezone page
-		const response = await fetch('https://www.iana.org/time-zones');
+	// Fetch the IANA timezone page
+	const result: Result<Response> = await tryResult(async () => await fetch('https://www.iana.org/time-zones'));
 
-		if (!response.ok) {
-			throw new Error(`Failed to fetch IANA page: ${response.status} ${response.statusText}`);
-		}
+	if (!result.ok || !result.value) {
+		return err(new Error(`Failed to fetch IANA page: ${result.ok ? 'No response X' : result.error.toString()}`));
+	}
 
-		const html = await response.text();
+	const response = result.value;
+	
+	// Check if the response is ok
+	if (!response.ok) {
+		return err(new Error(`Failed to fetch IANA page: ${response.status} ${response.statusText}`));
+	}
 
-		// Parse the HTML to find the table with class "iana-table"
-		const tableMatch = html.match(/<table class="iana-table">([\s\S]*?)<\/table>/);
-		if (!tableMatch) {
-			throw new Error('Could not find iana-table in the HTML');
-		}
-		const tableContent = tableMatch[1];
+	const html = await response.text();
 
-		// Find all rows
-		const rowMatches = tableContent.match(/<tr>[\s\S]*?<\/tr>/g);
-		if (!rowMatches) {
-			throw new Error('Could not find any rows in the iana-table');
-		}
+	// Parse the HTML to find the table with class "iana-table"
+	const tableMatch = html.match(/<table class="iana-table">([\s\S]*?)<\/table>/);
+	if (!tableMatch) {
+		return err(new Error('Could not find iana-table in the HTML'));
+	}
+	const tableContent = tableMatch[1];
 
-		// Find the row containing "Data Only Distribution"
-		const dataOnlyRow = rowMatches.find(row => row.includes('Data Only Distribution'));
-		if (!dataOnlyRow) {
-			throw new Error('Could not find "Data Only Distribution" row in the table');
-		}
+	// Find all rows
+	const rowMatches = tableContent.match(/<tr>[\s\S]*?<\/tr>/g);
+	if (!rowMatches) {
+		return err(new Error('Could not find any rows in the iana-table'));
+	}
 
-		// Extract the URL from the anchor tag in that row
-		const urlMatch = dataOnlyRow.match(/href="([^"]+)"/);
-		if (!urlMatch) {
-			throw new Error('Could not find URL in the "Data Only Distribution" row');
-		}
-		const url = urlMatch[1];
+	// Find the row containing "Data Only Distribution"
+	const dataOnlyRow = rowMatches.find((row: string) => row.includes('Data Only Distribution'));
+	if (!dataOnlyRow) {
+		return err(new Error('Could not find "Data Only Distribution" row in the table'));
+	}
 
-		// Ensure it's a complete URL (add protocol if missing)
-		if (url.startsWith('//')) {
-			return `https:${url}`;
-		} else if (url.startsWith('/')) {
-			return `https://data.iana.org${url}`;
-		}
-		return url;
-	});
+	// Extract the URL from the anchor tag in that row
+	const urlMatch = dataOnlyRow.match(/href="([^"]+)"/);
+	if (!urlMatch) {
+		return err(new Error('Could not find URL in the "Data Only Distribution" row'));
+	}
+	
+	const url = urlMatch[1];
+	return ok(url);
 }
 
 /**
@@ -69,6 +68,8 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 		assert(typeof url === 'string', new Error('URL must be a string'));
 		assert(typeof destinationFolder === 'string', new Error('Destination folder must be a string'));
 
+		console.dir({ url, destinationFolder, dryRun });
+
 		// Validate URL format
 		const urlCheck = await tryResult(async () => {
 			new URL(url);
@@ -82,7 +83,7 @@ export async function downloadAndExtractTarball(url: string, destinationFolder: 
 			? path.join(process.cwd(), 'dist', 'scripts', 'downloadAndExtractTarball.sh')
 			: path.join(process.cwd(), 'src', 'server', 'scripts', 'downloadAndExtractTarball.sh');
 		const tmpDir = './tmp';
-		
+
 		console.log(`🔍 NODE_ENV: ${process.env.NODE_ENV}`);
 		console.log(`🔍 Script path: ${scriptPath}`);
 

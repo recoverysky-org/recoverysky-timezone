@@ -38,7 +38,7 @@ import { assertNotNil, ok, err, Result, tryResult } from 'ts-rust-result';
  * 
  * @throws {Error} If timezone identifiers are invalid or timezonecomplete is not initialized
  */
-export async function getCurrentUtcOffset(
+export async function getCurrentTzOffset(
   sourceTimeZone: string,
   targetTimeZone: string = 'UTC'
 ): Promise<Result<{ iso: string; millis: number }>> {
@@ -75,11 +75,8 @@ export async function getCurrentUtcOffset(
     // This is robust for DST and all IANA timezones
     const offsetMillis = sourceOffsetMillis - targetOffsetMillis;
 
-    // Note: This function assumes timezonecomplete is initialized and tzdata is loaded.
-    // If not, results may be incorrect or throw errors.
     // The offset is always relative to the current instant (now),
     // so it will reflect DST and any current rules for the zones.
-
     return ok({
       iso: currentTimeInSource.toIsoString(), // ISO string in source timezone
       millis: offsetMillis // Offset in milliseconds

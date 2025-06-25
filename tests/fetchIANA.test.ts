@@ -1,44 +1,34 @@
 import { fetchDataOnlyDistributionUrl, updateTimezoneData } from '../src/server/functions/fetchIANA';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Response } from 'undici';
 
 // Mock fetch globally
-global.fetch = jest.fn();
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe('fetchIANA', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
-		(global.fetch as jest.Mock).mockReset();
+		vi.clearAllMocks();
+		mockFetch.mockReset();
 	});
 
 	describe('fetchDataOnlyDistributionUrl', () => {
 		it('should successfully fetch and parse IANA data URL from test HTML', async () => {
-			// Read the test HTML file
 			const testHtml = await fs.readFile(path.join(__dirname, 'data/time-zones.html'), 'utf-8');
-
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(testHtml)
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response(testHtml, { status: 200, headers: { 'Content-Type': 'text/html' } }));
 			const result = await fetchDataOnlyDistributionUrl();
-
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe('https://data.iana.org/time-zones/releases/tzdata2025b.tar.gz');
 			}
-			expect(global.fetch).toHaveBeenCalledWith('https://www.iana.org/time-zones');
+			expect(mockFetch).toHaveBeenCalledWith('https://www.iana.org/time-zones');
 		});
 
 		it('should return error when fetch fails', async () => {
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: false,
-				status: 404,
-				statusText: 'Not Found'
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response('', { status: 404, statusText: 'Not Found' }));
 			const result = await fetchDataOnlyDistributionUrl();
-
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.message).toContain('Failed to fetch IANA page');
@@ -47,14 +37,8 @@ describe('fetchIANA', () => {
 
 		it('should return error when iana-table is not found', async () => {
 			const mockHtml = '<html><body>No table here</body></html>';
-
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(mockHtml)
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response(mockHtml, { status: 200, headers: { 'Content-Type': 'text/html' } }));
 			const result = await fetchDataOnlyDistributionUrl();
-
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.message).toContain('Could not find iana-table in the HTML');
@@ -72,14 +56,8 @@ describe('fetchIANA', () => {
 					</table>
 				</html>
 			`;
-
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(mockHtml)
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response(mockHtml, { status: 200, headers: { 'Content-Type': 'text/html' } }));
 			const result = await fetchDataOnlyDistributionUrl();
-
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.message).toContain('Could not find "Data Only Distribution" row in the table');
@@ -89,15 +67,8 @@ describe('fetchIANA', () => {
 
 	describe('updateTimezoneData', () => {
 		it('should handle URL fetch failure', async () => {
-			// Mock fetch to fail
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: false,
-				status: 500,
-				statusText: 'Internal Server Error'
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response('', { status: 500, statusText: 'Internal Server Error' }));
 			const result = await updateTimezoneData('./test-dest', undefined, true);
-
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.message).toContain('Failed to fetch IANA data URL');
@@ -105,16 +76,9 @@ describe('fetchIANA', () => {
 		});
 
 		it('should skip download when current version matches fetched version', async () => {
-			// Read the test HTML file
 			const testHtml = await fs.readFile(path.join(__dirname, 'data/time-zones.html'), 'utf-8');
-
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(testHtml)
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response(testHtml, { status: 200, headers: { 'Content-Type': 'text/html' } }));
 			const result = await updateTimezoneData('./test-dest', '2025b', true);
-
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.updated).toBe(false);
@@ -123,16 +87,9 @@ describe('fetchIANA', () => {
 		});
 
 		it('should proceed with download when current version is different', async () => {
-			// Read the test HTML file
 			const testHtml = await fs.readFile(path.join(__dirname, 'data/time-zones.html'), 'utf-8');
-
-			(global.fetch as jest.Mock).mockResolvedValueOnce({
-				ok: true,
-				text: () => Promise.resolve(testHtml)
-			});
-
+			mockFetch.mockResolvedValueOnce(new Response(testHtml, { status: 200, headers: { 'Content-Type': 'text/html' } }));
 			const result = await updateTimezoneData('./test-dest', '2024a', true);
-
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.updated).toBe(true);

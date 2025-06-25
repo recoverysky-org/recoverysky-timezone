@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/server/**/*.ts', 'src/common/**/*.ts'],
+  entry: ['src/server/**/*.ts'],
   outDir: 'dist',
-  format: ['cjs'], // 👈 CommonJS output
+  format: ['esm'], // 👈 ESM output
   target: 'node22',
   sourcemap: true,
   clean: true,
