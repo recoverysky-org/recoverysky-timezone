@@ -1,10 +1,10 @@
-import { getCurrentTzOffset } from '../src/server/functions/getCurrentTzOffset';
+import { getTzToTzOffset } from '../src/server/functions/getTzToTzOffset';
 import { isOk, isErr, Result } from 'ts-rust-result';
 import { describe, it, expect } from 'vitest';
 
-describe('getCurrentTzOffset', () => {
+describe('getTzToTzOffset', () => {
     it('returns correct offset from New York to UTC', async () => {
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('America/New_York');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('America/New_York');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -21,33 +21,22 @@ describe('getCurrentTzOffset', () => {
     });
 
     it('returns correct offset from Tokyo to London', async () => {
-        // Since we now only calculate offset to UTC, we need to calculate the difference manually
-        const tokyoResult = await getCurrentTzOffset('Asia/Tokyo');
-        const londonResult = await getCurrentTzOffset('Europe/London');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Asia/Tokyo', 'Europe/London');
         
-        expect(isOk(tokyoResult)).toBe(true);
-        expect(isOk(londonResult)).toBe(true);
-        
-        if (isOk(tokyoResult) && isOk(londonResult)) {
-            const tokyoOffset = tokyoResult.value.millis;
-            const londonOffset = londonResult.value.millis;
-            const difference = tokyoOffset - londonOffset;
-            
+        expect(isOk(result)).toBe(true);
+        if (isOk(result)) {
             // Tokyo is UTC+9, London is UTC+0/+1, so offset is 8-9 hours
-            const offsetHours = difference / (60 * 60 * 1000);
+            const offsetHours = result.value.millis / (60 * 60 * 1000);
             expect(offsetHours).toBeGreaterThanOrEqual(8);
             expect(offsetHours).toBeLessThanOrEqual(9);
             
             // Test signedStr format - should be positive
-            const sign = difference >= 0 ? '+' : '-';
-            const absHours = Math.abs(offsetHours);
-            expect(absHours).toBeGreaterThanOrEqual(8);
-            expect(absHours).toBeLessThanOrEqual(9);
+            expect(result.value.signedStr).toMatch(/^\+0[8-9]:[0-5][0-9]$/); // +08:00 or +09:00
         }
     });
 
     it('returns zero offset for same timezone', async () => {
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('UTC');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('UTC', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -58,7 +47,7 @@ describe('getCurrentTzOffset', () => {
 
     it('handles fractional hour offsets correctly', async () => {
         // Test with India (UTC+5:30)
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Asia/Kolkata');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Asia/Kolkata', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -70,7 +59,7 @@ describe('getCurrentTzOffset', () => {
 
     it('handles negative fractional hour offsets correctly', async () => {
         // Test with Newfoundland (UTC-3:30 in winter, UTC-2:30 in summer)
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('America/St_Johns');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('America/St_Johns', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -87,7 +76,7 @@ describe('getCurrentTzOffset', () => {
 
     it('handles extreme positive offsets', async () => {
         // Test with Line Islands (UTC+14)
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Pacific/Kiritimati');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Pacific/Kiritimati', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -100,7 +89,7 @@ describe('getCurrentTzOffset', () => {
     it('handles extreme negative offsets', async () => {
         // Test with a timezone that has extreme negative offset
         // Using Etc/GMT+12 which represents Baker Island (UTC-12)
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Etc/GMT+12');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Etc/GMT+12', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -111,8 +100,9 @@ describe('getCurrentTzOffset', () => {
     });
 
     it('handles minute-only offsets', async () => {
-        // Test with UTC which has zero offset
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('UTC');
+        // Test with a timezone that has minute-only offset (if any exist)
+        // Most timezones are whole hours, but let's test the logic
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('UTC', 'UTC');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -121,30 +111,31 @@ describe('getCurrentTzOffset', () => {
     });
 
     it('handles large hour offsets correctly', async () => {
-        // Test with timezones that are far apart
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Asia/Tokyo');
+        // Test with a timezone that has large hour offset
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Asia/Tokyo', 'America/Los_Angeles');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-            // Tokyo is UTC+9 (no DST)
+            // Tokyo is ahead of Los Angeles by 16-17 hours depending on DST
             const offsetHours = result.value.millis / (60 * 60 * 1000);
-            expect(offsetHours).toBe(9);
+            expect(offsetHours).toBeGreaterThanOrEqual(16);
+            expect(offsetHours).toBeLessThanOrEqual(17);
             
             // signedStr should be positive and formatted correctly
-            expect(result.value.signedStr).toBe('+09:00');
+            expect(result.value.signedStr).toMatch(/^\+1[6-7]:[0-5][0-9]$/); // +16:00 or +17:00
         }
     });
 
     it('validates signedStr format consistency', async () => {
         // Test that signedStr always follows the correct format
         const testCases = [
-            { source: 'UTC', expected: '+00:00' },
-            { source: 'Asia/Kolkata', expected: '+05:30' },
-            { source: 'Pacific/Honolulu', expected: '-10:00' }
+            { source: 'UTC', target: 'UTC', expected: '+00:00' },
+            { source: 'Asia/Kolkata', target: 'UTC', expected: '+05:30' },
+            { source: 'Pacific/Honolulu', target: 'UTC', expected: '-10:00' }
         ];
 
         for (const testCase of testCases) {
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset(testCase.source);
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset(testCase.source, testCase.target);
             
             expect(isOk(result)).toBe(true);
             if (isOk(result)) {
@@ -167,7 +158,7 @@ describe('getCurrentTzOffset', () => {
     });
 
     it('returns error for invalid timezone', async () => {
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Invalid/Timezone');
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Invalid/Timezone');
         
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
@@ -178,30 +169,43 @@ describe('getCurrentTzOffset', () => {
 
     it('returns error for missing source timezone', async () => {
         // @ts-ignore
-        const result = await getCurrentTzOffset(null);
+        const result = await getTzToTzOffset(null);
         
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
-            expect(result.error.message).toMatch(/unexpected type for first argument|Failed to calculate UTC offset/i);
+            expect(result.error.message).toMatch(/sourceTimeZone is required/i);
+        }
+    });
+
+    it('returns error for missing target timezone', async () => {
+        // @ts-ignore
+        const result = await getTzToTzOffset('UTC', null);
+        
+        expect(isErr(result)).toBe(true);
+        if (isErr(result)) {
+            expect(result.error.message).toMatch(/targetTimeZone is required/i);
         }
     });
 
     it('handles edge case of very small offsets', async () => {
-        // Test with UTC which should have zero offset
-        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('UTC');
+        // Test with timezones that are very close to each other
+        const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Europe/London', 'Europe/Paris');
         
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-            // UTC should have zero offset
-            expect(result.value.millis).toBe(0);
-            expect(result.value.signedStr).toBe('+00:00');
+            // London and Paris are typically 0 or 1 hour apart depending on DST
+            const offsetHours = Math.abs(result.value.millis) / (60 * 60 * 1000);
+            expect(offsetHours).toBeLessThanOrEqual(1);
+            
+            // signedStr should be properly formatted regardless of size
+            expect(result.value.signedStr).toMatch(/^[+-]\d{2}:\d{2}$/);
         }
     });
 
     // Individual timezone investigation tests
     describe('Individual Timezone Investigation', () => {
         it('investigates Tokyo to UTC offset', async () => {
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Asia/Tokyo');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Asia/Tokyo', 'UTC');
             
             expect(isOk(result)).toBe(true);
             if (isOk(result)) {
@@ -219,7 +223,7 @@ describe('getCurrentTzOffset', () => {
         });
 
         it('investigates London to UTC offset', async () => {
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Europe/London');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Europe/London', 'UTC');
             
             expect(isOk(result)).toBe(true);
             if (isOk(result)) {
@@ -244,33 +248,32 @@ describe('getCurrentTzOffset', () => {
         });
 
         it('investigates Tokyo to London offset', async () => {
-            // Since we now only calculate offset to UTC, we need to calculate the difference manually
-            const tokyoResult = await getCurrentTzOffset('Asia/Tokyo');
-            const londonResult = await getCurrentTzOffset('Europe/London');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Asia/Tokyo', 'Europe/London');
             
-            expect(isOk(tokyoResult)).toBe(true);
-            expect(isOk(londonResult)).toBe(true);
-            
-            if (isOk(tokyoResult) && isOk(londonResult)) {
-                const tokyoOffset = tokyoResult.value.millis;
-                const londonOffset = londonResult.value.millis;
-                const difference = tokyoOffset - londonOffset;
-                
-                console.log('Tokyo to London (calculated):', {
-                    tokyoOffset: tokyoResult.value.signedStr,
-                    londonOffset: londonResult.value.signedStr,
-                    difference: difference / (60 * 60 * 1000) + ' hours'
+            expect(isOk(result)).toBe(true);
+            if (isOk(result)) {
+                console.log('Tokyo to London:', {
+                    signedStr: result.value.signedStr,
+                    millis: result.value.millis,
+                    hours: result.value.millis / (60 * 60 * 1000),
+                    iso: result.value.iso
                 });
                 
                 // Tokyo (UTC+9) to London (UTC+0/+1) should be +8 or +9 hours
-                const offsetHours = difference / (60 * 60 * 1000);
+                const offsetHours = result.value.millis / (60 * 60 * 1000);
                 expect(offsetHours).toBeGreaterThanOrEqual(8);
                 expect(offsetHours).toBeLessThanOrEqual(9);
+                
+                if (offsetHours === 8) {
+                    expect(result.value.signedStr).toBe('+08:00'); // London in BST (summer)
+                } else {
+                    expect(result.value.signedStr).toBe('+09:00'); // London in GMT (winter)
+                }
             }
         });
 
         it('investigates Newfoundland to UTC offset', async () => {
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('America/St_Johns');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('America/St_Johns', 'UTC');
             
             expect(isOk(result)).toBe(true);
             if (isOk(result)) {
@@ -297,7 +300,7 @@ describe('getCurrentTzOffset', () => {
         it('investigates Baker Island timezone existence', async () => {
             // Note: Pacific/Baker is an alias to Etc/GMT+12, but timezonecomplete doesn't recognize the alias
             // So we test Etc/GMT+12 directly, which represents the same timezone (UTC-12)
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('Etc/GMT+12');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('Etc/GMT+12', 'UTC');
             
             console.log('Baker Island (Etc/GMT+12) result:', isOk(result) ? 'SUCCESS' : 'ERROR');
             if (isOk(result)) {
@@ -318,7 +321,7 @@ describe('getCurrentTzOffset', () => {
         });
 
         it('tests zero offset sign handling', async () => {
-            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset('UTC');
+            const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset('UTC', 'UTC');
             
             expect(isOk(result)).toBe(true);
             if (isOk(result)) {
@@ -360,7 +363,7 @@ describe('getCurrentTzOffset', () => {
             ] as const;
 
             for (const testCase of testCases) {
-                const result: Result<{ iso: string; signedStr: string; millis: number }> = await getCurrentTzOffset(testCase.timezone);
+                const result: Result<{ iso: string; signedStr: string; millis: number }> = await getTzToTzOffset(testCase.timezone, 'UTC');
                 
                 expect(isOk(result)).toBe(true);
                 if (isOk(result)) {
