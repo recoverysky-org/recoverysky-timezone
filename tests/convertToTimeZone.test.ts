@@ -139,13 +139,13 @@ describe('convertToTimeZone', () => {
 		}
 	});
 
-	it('returns error for missing fromTimeZone', async () => {
+	it('returns error for missing sourceTimeZone', async () => {
 		// @ts-ignore - Testing null input
 		const result = await convertToTimeZone('2024-01-15T10:30:00', null, 'America/New_York');
 
 		expect(isErr(result)).toBe(true);
 		if (isErr(result)) {
-			expect(result.error.message).toMatch(/fromTimeZone is required/i);
+			expect(result.error.message).toMatch(/sourceTimeZone is required/i);
 		}
 	});
 

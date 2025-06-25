@@ -6,14 +6,16 @@ import { assertNotNil, err, ok, Result } from 'ts-rust-result';
  * @param isoString - The ISO datetime string (with timezone info)
  * @returns Promise<Result<{ utc: string; milliseconds: number }>> - UTC string and milliseconds or error
  */
-export async function convertToTimeZone(isoString: string, fromTimeZone?: string, toTimeZone?: string ): Promise<Result<{ iso: string; millis: number }>> {
+export async function convertToTimeZone(isoString: string, sourceTimeZone?: string, toTimeZone?: string ): Promise<Result<{ iso: string; millis: number }>> {
   try {
     let result = assertNotNil(isoString, 'isoString is required'); 
-    result = assertNotNil(fromTimeZone, 'fromTimeZone is required'); 
-    result = assertNotNil(toTimeZone, 'toTimeZone is required'); 
+    result = assertNotNil(sourceTimeZone, 'sourceTimeZone is required'); 
+
+    // Set defaults
+    toTimeZone = toTimeZone || 'UTC';
 
     // Parse the input ISO string in the source time zone
-    let sourceTz = zone(fromTimeZone!)
+    let sourceTz = zone(sourceTimeZone!)
     const source = new DateTime(isoString, sourceTz)
 
     // Convert to target time zone
