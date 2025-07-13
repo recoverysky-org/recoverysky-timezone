@@ -1,0 +1,65 @@
+name: Build & Push Docker Image to AWS ECR
+
+on:
+  push:
+    branches-ignore:
+      - root
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read 
+
+env:
+  ENV: ${{ github.ref_name }}
+  AWS_REGION: ${{ github.ref_name == 'dev' && 'us-east-2' || github.ref_name == 'staging' && 'us-west-2' || github.ref_name == 'prod' && 'us-east-1' || 'us-east-2' }}
+      
+jobs:
+  docker-build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.AWS_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}
+          tags: |
+            type=raw,value=${{ github.event.repository.name }}-${{ env.ENV }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.AWS_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:cache
+          cache-to: type=registry,ref=${{ secrets.AWS_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}:cache,mode=max
+
+      - name: Deploy to AWS Service (Optional)
+        run: |
+          echo "Trigger deployment here if needed"
