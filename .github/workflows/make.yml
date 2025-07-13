@@ -75,3 +75,8 @@ jobs:
       - name: Deploy to AWS Service (Optional)
         run: |
           echo "Trigger deployment here if needed"
+
+      - name: Copy compose.yml to S3
+        run: |
+          aws s3 cp compose.yml s3://recoverysky-compose/${{ env.ENV }}/${{ github.event.repository.name }}/compose.yml
+          echo "✅ Uploaded compose.yml to S3 bucket: recoverysky-compose"
