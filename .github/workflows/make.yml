@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -59,7 +61,7 @@ jobs:
         with:
           images: ${{ secrets.AWS_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ github.event.repository.name }}
           tags: |
-            type=raw,value=${{ github.event.repository.name }}-${{ env.ENV }}
+            type=raw,value=${{ env.ENV }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
