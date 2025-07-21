@@ -2,7 +2,7 @@ services:
   recoverysky-timezone:
     container_name: recoverysky-timezone
     platform: linux/arm64
-    image: 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:latest
+    image: 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:${ENV}
     restart: always
     ports:
       - "3838:3838"
