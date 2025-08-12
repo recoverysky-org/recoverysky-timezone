@@ -3,6 +3,7 @@ FROM node:22-slim AS builder
 
 ENV NODE_ENV=production
 
+
 # Enable pnpm (faster than npm/yarn)
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
