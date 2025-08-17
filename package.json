@@ -7,7 +7,7 @@
   "main": "dist/index.js",
   "keywords": [],
   "license": "ISC",
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.11.0",
   "scripts": {
     "dev": "tsx watch src/server/index.ts start",
     "make": "pnpm build && pnpm test&& pnpm docker:build && pnpm docker:tag && pnpm docker:push",

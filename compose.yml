@@ -8,9 +8,9 @@ services:
       - "3838:3838"
     command: ["node", "dist/index.js", "start", "--debug"]
     networks:
-      - recoverysky-network
+      - recoverysky
 
 networks:
-  recoverysky-network:
+  recoverysky:
     external: true
 
