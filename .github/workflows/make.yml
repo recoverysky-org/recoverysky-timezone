@@ -30,7 +30,7 @@ jobs:
 
       - name: Copy compose.yml to S3
         run: |
-          aws s3 sync opt/ s3://recoverysky-bucket/compose/${{ env.ENV }}/${{ github.event.repository.name }}/ --exact-timestamps
+          aws s3 sync opt/ s3://recoverysky-containers/${{ env.ENV }}/${{ github.event.repository.name }}/ --exact-timestamps
           echo "✅ Uploaded compose.yml to S3 bucket: recoverysky-bucket/compose/"
 
       - name: Setup pnpm
