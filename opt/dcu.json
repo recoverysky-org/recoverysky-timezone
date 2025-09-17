@@ -1,0 +1,6 @@
+{
+  "name": "timezone",
+  "description": "Starting Docker Compose services for Timezone",
+  "compose": "/var/lib/recoverysky/compose/athena",
+  "vault": ["docker-config:Timezone", "app-config:Timezone"]
+}
