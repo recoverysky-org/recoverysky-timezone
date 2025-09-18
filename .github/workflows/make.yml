@@ -6,13 +6,13 @@ on:
       - root
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read 
+  id-token: write # This is required for requesting the JWT
+  contents: read
 
 env:
   ENV: ${{ github.ref_name }}
   AWS_REGION: ${{ github.ref_name == 'dev' && 'us-east-2' || github.ref_name == 'staging' && 'us-west-2' || github.ref_name == 'prod' && 'us-east-1' || 'us-east-2' }}
-      
+
 jobs:
   docker-build-and-push:
     runs-on: ubuntu-latest
@@ -21,35 +21,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10.11.0
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        
-      - name: Build source
-        run: pnpm build
-        
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Copy compose.yml to S3
+        run: |
+          aws s3 sync opt/ s3://recoverysky-containers/${{ env.ENV }}/${{ github.event.repository.name }}/ --exact-timestamps
+          echo "✅ Uploaded compose.yml to S3 bucket: recoverysky-bucket/compose/"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.11.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build source
+        run: pnpm build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -77,8 +82,3 @@ jobs:
       - name: Deploy to AWS Service (Optional)
         run: |
           echo "Trigger deployment here if needed"
-
-      - name: Copy compose.yml to S3
-        run: |
-          aws s3 cp compose.yml s3://recoverysky-bucket/compose/${{ env.ENV }}/${{ github.event.repository.name }}/compose.yml
-          echo "✅ Uploaded compose.yml to S3 bucket: recoverysky-bucket/compose/"
