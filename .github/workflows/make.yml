@@ -55,7 +55,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Upload opt/shared to rsync.net
+      - name: Upload opt/ to rsync.net
         uses: ./.github/actions/rsync-upload
         with:
           src: opt/
