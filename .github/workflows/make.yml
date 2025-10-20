@@ -28,11 +28,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Copy compose.yml to S3
-        run: |
-          aws s3 sync opt/ s3://recoverysky-containers/${{ env.ENV }}/${{ github.event.repository.name }}/ --exact-timestamps
-          echo "✅ Uploaded compose.yml to S3 bucket: recoverysky-bucket/compose/"
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
@@ -59,6 +54,15 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Upload opt/shared to rsync.net
+        uses: ./.github/actions/rsync-upload
+        with:
+          src: opt/
+          dest: recoverysky/containers/${{ env.ENV }}/${{ github.event.repository.name }}/
+          rsync_host: ${{ secrets.RSYNC_HOST }}
+          rsync_user: ${{ secrets.RSYNC_USER }}
+          ssh_private_key: ${{ secrets.RSYNC_SSH_PRIVATE_KEY }}
 
       - name: Extract metadata
         id: meta
