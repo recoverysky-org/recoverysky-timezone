@@ -4,13 +4,16 @@ services:
     platform: linux/arm64
     image: 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:${ENV}
     restart: always
-    ports:
-      - "3838:3838"
     command: ["node", "dist/index.js", "start", "--debug"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3838/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - recoverysky
 
 networks:
   recoverysky:
     external: true
-

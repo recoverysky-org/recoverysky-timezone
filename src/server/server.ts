@@ -122,6 +122,23 @@ app.post('/api/v1/tz-offset', async (req, res) => {
 });
 
 /**
+ * Health check endpoint
+ * @returns Server status and uptime information
+ */
+app.get('/status', (req, res) => {
+  const status = {
+    ok: true,
+    service: 'recoverysky-timezone',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    nodeVersion: process.version,
+    env: process.env.NODE_ENV || 'development'
+  };
+
+  return res.json(status);
+});
+
+/**
  * Start the server
  */
 export async function startServer(): Promise<void> {
