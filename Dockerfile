@@ -10,8 +10,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Set working directory
 WORKDIR /app
 
-# Install curl using apt (Debian-based image)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install curl and wget using apt (Debian-based image)
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
 
 # Copy lockfile and manifest for dependency caching
 COPY package.json pnpm-lock.yaml ./
@@ -35,8 +35,8 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install curl in the runtime container too (if your app needs it at runtime)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install curl and wget in the runtime container too (if your app needs it at runtime)
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
 
 # Copy everything from the builder stage
 COPY --from=builder /app /app
