@@ -2,17 +2,35 @@ services:
   recoverysky-timezone:
     container_name: recoverysky-timezone
     platform: linux/arm64
-    image: 376129859732.dkr.ecr.${AWS_REGION}.amazonaws.com/recoverysky-timezone:${ENV}
+    image: ${DOCKER_IMAGE}
     restart: always
     command: ["node", "dist/index.js", "start", "--debug"]
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3838/status"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3838/status",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
       - recoverysky
+
+    # Docker resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: ${DOCKER_CPUS_LIMIT}
+          memory: ${DOCKER_MEMORY_LIMIT}
+        reservations:
+          cpus: ${DOCKER_CPUS_RESERVATION}
+          memory: ${DOCKER_MEMORY_RESERVATION}
 
 networks:
   recoverysky:
